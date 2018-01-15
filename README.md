@@ -2,13 +2,16 @@
 
 ## Background
 
-While doing tech support for KTM, I often had reason to suggest that someone add logging to their project script to diagnose problems.  In some cases these projects already had logging functions, however
+In 2011 I wrote a framework of logging functions for KTM script.  The [documentation](ScriptLoggingDocumentation.md) goes into some of the rationale for how it was designed.  The main goal was to make it easy to quickly drop into a project, add a few logging function calls, and know that relevant metadata would be included in the resulting logs.
 
 ## Logging Framework Code
 
-[Script Logging Documentation](ScriptLoggingDocumentation.md)
+The logging code can be pasted into any new or existing project and just needs
 
-The logging code can be pasted into any new or existing project and just needs to be initialized as described in the required functions section of the documentation.  Then call the useful functions (ScriptLog, ErrorLog, and MsgBoxLog) as needed throughout the project.
+* To be initialized as described in the [required functions](ScriptLoggingDocumentation.md#required-functions) section of the documentation.
+* A project level reference to the Microsoft Scripting Runtime, which many KTM projects already include.
+
+Then call the [useful functions](ScriptLoggingDocumentation.md#useful-functions) (ScriptLog, ErrorLog, and MsgBoxLog) as needed throughout the project.
 
 ## Testing the Logging Framework
 
