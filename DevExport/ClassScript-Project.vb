@@ -1,6 +1,6 @@
 '#Reference {420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#C:\Windows\SysWOW64\scrrun.dll#Microsoft Scripting Runtime#Scripting
+'#Language "WWB-COM"
 Option Explicit
-
 'KTM Script Logging Framework
 '2013-09-09 - Splitting batch logs by PID is now optional, default to off (set constant PROCESS_ID_IN_BATCHLOG_FILENAME)
 '2013-08-08 - Design-time only issue in PB 6.0 fixed: When ParentFolder not known, doc/page not recorded.
@@ -9,7 +9,6 @@ Option Explicit
 '           - Introduced dependency on Wscript.Shell to get correct path regardless of version or language of the OS.
 '           - Fix for negative error numbers not logged
 '2012-12-16 - Delimiter was missing, causing Windows user and module to be combined
-
 
 'CONFIGURABLE LOGGING CONSTANTS
 
@@ -64,7 +63,7 @@ Public BATCH_USERSTRING As String 'combination of the previous three
 
 
 
-'========  LOGGING CODE =======
+'======== START LOGGING CODE ========
 
 'Initialize Capture/runtime info.  Call from Application_InitializeBatch
 Public Sub Logging_InitializeBatch(ByVal pXRootFolder As CscXFolder)
@@ -1122,65 +1121,9 @@ Public Function MsgBoxLog(ByVal Message As String, _
    ErrorLog(Err, "", pXDoc, pXFolder, 0, ONLY_ON_ERROR, SUPPRESS_MSGBOX)
    Resume Next
 End Function
+'========  END   LOGGING CODE ========
 
-
-Public Sub Design_ExportScriptAndLocators()
-   ' Exports design info to folders parallel to the project folder:
-   ' \ProjectFolderParent\Scripts - Script of each class
-   ' \ProjectFolderParent\Locators - Export of locator definition file for each locator
-
-   ' Make sure you've added the Microsoft Scripting Runtime reference
-   Dim fso As New Scripting.FileSystemObject
-   Dim ProjectFolder As String
-   Dim ScriptFolder As String
-   Dim LocatorFolder As String
-
-   ProjectFolder=fso.GetFile(Project.FileName).ParentFolder.ParentFolder.Path
-   ScriptFolder=fso.BuildPath(ProjectFolder,"Scripts")
-   LocatorFolder=fso.BuildPath(ProjectFolder,"Locators")
-
-   ' Here we use class index -1 to represent the special case of the project class
-   Dim ClassIndex As Long
-   For ClassIndex=-1 To Project.ClassCount-1
-      Dim KTMClass As CscClass, ClassName As String, ScriptCode As String
-
-      ' Get the script of this class
-      If ClassIndex=-1 Then
-         Set KTMClass=Project.RootClass
-         ScriptCode=Project.ScriptCode
-      Else
-         Set KTMClass=Project.ClassByIndex(ClassIndex)
-         ScriptCode=KTMClass.ScriptCode
-      End If
-
-      ' Get the name of the class
-      ClassName=IIf(ClassIndex=-1,"Project",KTMClass.Name)
-
-      ' Export script to file
-      If fso.FolderExists(ScriptFolder) Then
-         Dim ScriptFile As TextStream
-         Set ScriptFile=fso.CreateTextFile(ScriptFolder & "\Script-" & ClassName & ".vb",True,False)
-         ScriptFile.Write(ScriptCode)
-         ScriptFile.Close()
-      End If
-
-      ' Export locators (same as from Project Builder menus)
-      If fso.FolderExists(LocatorFolder) Then
-         Dim FileName As String
-         Dim LocatorIndex As Integer
-         For LocatorIndex=0 To KTMClass.Locators.Count-1
-            If Not KTMClass.Locators.ItemByIndex(LocatorIndex).LocatorMethod Is Nothing Then
-               FileName="\" & ClassName & "-" & KTMClass.Locators.ItemByIndex(LocatorIndex).Name & ".loc"
-               KTMClass.Locators.ItemByIndex(LocatorIndex).ExportLocatorMethod(LocatorFolder & FileName,LocatorFolder)
-            End If
-         Next
-      End If
-   Next
-End Sub
-
-
-'========  END LOGGING CODE =======
-'========  LOGGING IMPLEMENTATION ======
+'========  START LOGGING IMPLEMENTATION ========
 Private Sub Application_InitializeBatch(ByVal pXRootFolder As CASCADELib.CscXFolder)
    Logging_InitializeBatch(pXRootFolder)
 End Sub
@@ -1192,4 +1135,119 @@ End Sub
 Private Sub Batch_Open(ByVal pXRootFolder As CASCADELib.CscXFolder)
    Logging_BatchOpen(pXRootFolder)
 End Sub
-'========  END LOGGING IMPLEMENTATION ======
+'========  END   LOGGING IMPLEMENTATION ========
+
+
+'========  START DEV EXPORT ========
+Public Function ClassHierarchy(KtmClass As CscClass) As String
+   ' Given TargetClass, returns Baseclass\subclass\(etc...)\TargetClass\
+
+   Dim CurClass As CscClass, Result As String
+   Set CurClass = KtmClass
+
+   While Not CurClass.ParentClass Is Nothing
+      Result=CurClass.Name & "\" & Result
+      Set CurClass = CurClass.ParentClass
+   Wend
+   Result=CurClass.Name & "\" & Result
+   Return Result
+End Function
+
+Public Sub CreateClassFolders(ByVal BaseFolder As String, Optional KtmClass As CscClass=Nothing)
+   ' Creates folders in BaseFolder matching the project class structure
+
+   Dim SubClasses As CscClasses
+   If KtmClass Is Nothing Then
+      ' Start with the project class, but don't create a folder
+      Set KtmClass = Project.RootClass
+      Set SubClasses = Project.BaseClasses
+   Else
+      ' Create folder for this class and become the new base folder
+      Dim fso As New Scripting.FileSystemObject, NewBase As String
+      BaseFolder=fso.BuildPath(BaseFolder,KtmClass.Name)
+      If Not fso.FolderExists(BaseFolder) Then
+         fso.CreateFolder(BaseFolder)
+      End If
+      Set SubClasses = KtmClass.SubClasses
+   End If
+
+   ' Subclasses
+   Dim ClassIndex As Long
+   For ClassIndex=1 To SubClasses.Count
+      CreateClassFolders(BaseFolder, SubClasses.ItemByIndex(ClassIndex))
+   Next
+End Sub
+
+
+
+Public Sub Dev_ExportScriptAndLocators()
+   ' Exports design info (script, locators) to to folders matching the project class structure
+   ' Default to \ProjectFolderParent\DevExport\(Class Folders)
+   ' Set script variable Dev-Export-BaseFolder to path to override
+   ' Set script variable Dev-Export-CopyName-(ClassName) to save a separate named copy of a class script
+
+   ' Make sure you've added the Microsoft Scripting Runtime reference
+   Dim fso As New Scripting.FileSystemObject
+   Dim ExportFolder As String, ScriptFolder As String, LocatorFolder As String
+
+   ' Either use the provided path or default to the parent of the project folder
+   If fso.FolderExists(Project.ScriptVariables("Dev-Export-BaseFolder")) Then
+      ExportFolder=Project.ScriptVariables("Dev-Export-BaseFolder")
+   Else
+      ExportFolder=fso.GetFile(Project.FileName).ParentFolder.ParentFolder.Path & "\DevExport"
+   End If
+
+   ' Create folder structure for project classes
+   If Not fso.FolderExists(ExportFolder) Then fso.CreateFolder(ExportFolder)
+   CreateClassFolders(ExportFolder)
+
+   ' Here we use class index -1 to represent the special case of the project class
+   Dim ClassIndex As Long
+   For ClassIndex=-1 To Project.ClassCount-1
+      Dim KtmClass As CscClass, ClassName As String, ScriptCode As String, ClassPath As String
+
+      ' Get the script of this class
+      If ClassIndex=-1 Then
+         Set KtmClass=Project.RootClass
+         ScriptCode=Project.ScriptCode
+      Else
+         Set KtmClass=Project.ClassByIndex(ClassIndex)
+         ScriptCode=KtmClass.ScriptCode
+      End If
+
+      ' TODO: check if script is "empty": Option Explicit \n\n ' Class script: {classname}
+
+      ' Get the name and file path for the class
+      ClassPath = fso.BuildPath(ExportFolder, ClassHierarchy(KtmClass))
+      ClassName=IIf(ClassIndex=-1,"Project",KtmClass.Name)
+
+      ' TODO: Possibly change to match the naming conventions used in the KTM 6.1.1+ feature to save scripts.
+
+      ' Export script to file
+      Dim ScriptFile As TextStream
+      Set ScriptFile=fso.CreateTextFile(ClassPath & "\ClassScript-" & ClassName & ".vb",True,False)
+      ScriptFile.Write(ScriptCode)
+      ScriptFile.Close()
+
+      ' Save a copy if a name is defined
+      Dim CopyName As String
+      CopyName=Project.ScriptVariables("Dev-Export-CopyName-" & ClassName)
+
+      If Not CopyName="" Then
+         Set ScriptFile=fso.CreateTextFile(ClassPath & "\" & CopyName & ".vb",True,False)
+         ScriptFile.Write(ScriptCode)
+         ScriptFile.Close()
+      End If
+
+      ' Export locators (same as from Project Builder menus)
+      Dim FileName As String
+      Dim LocatorIndex As Integer
+      For LocatorIndex=0 To KtmClass.Locators.Count-1
+         If Not KtmClass.Locators.ItemByIndex(LocatorIndex).LocatorMethod Is Nothing Then
+            FileName="\" & ClassName & "-" & KtmClass.Locators.ItemByIndex(LocatorIndex).Name & ".loc"
+            KtmClass.Locators.ItemByIndex(LocatorIndex).ExportLocatorMethod(ClassPath & FileName, ClassPath)
+         End If
+      Next
+   Next
+End Sub
+'========  END   DEV EXPORT ========

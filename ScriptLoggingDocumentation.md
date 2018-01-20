@@ -1,4 +1,4 @@
-# Kofax Transformation Modules Script Logging Framework
+# KTM Script Logging Documentation
 
 ## Log File Location
 

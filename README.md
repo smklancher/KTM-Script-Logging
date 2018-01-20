@@ -4,6 +4,8 @@
 
 In 2011 I wrote a framework of logging functions for KTM script.  The [documentation](ScriptLoggingDocumentation.md) goes into some of the rationale for how it was designed.  The main goal was to make it easy to quickly drop into a project, add a few logging function calls, and know that relevant metadata would be included in the resulting logs.
 
+I also put together some thoughts on approaches to adding a KTM project to source control: [KTM Source Control](KTMSourceControl.md)
+
 ## Logging Framework Code
 
 The logging code can be pasted into any new or existing project and just needs
@@ -23,7 +25,15 @@ The test project that contains the logging code has a Validation Form with the f
     7/23/2011 9:39:04 PM (77943.87) -- D1\P1 (DocumentCustomer.xdc\DocumentCustomer.tif) -- ValidationDesign 1 -- [Document Routing Demo|ValidationForm_ButtonClicked# 19]
     MsgBox: User clicked Cancel for message "This message, MsgBox style, and user choice will be logged." (vbOkOnly, vbCritical, vbDefaultButton1, vbApplicationModal)
 
-## Kofax TotalAgility
+## Compatibility
+
+### KTM
+
+* This was written to be compatible with KTM 5.0 and higher.
+* Some of the metadata is only available in KTM 5.5 and higher.
+* The test project is compatible with KTM 5.5 and higher.
+
+### TotalAgility
 
 This framework was written long before KTA, and ideally it would be redesigned to better target that platform.  The following guidance is offered if using the current code on KTA:
 

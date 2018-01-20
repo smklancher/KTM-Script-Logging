@@ -36,5 +36,5 @@ Private Sub ValidationForm_ButtonClicked(ByVal ButtonName As String, ByVal pXDoc
 End Sub
 
 Private Sub ValidationForm_DocumentLoaded(ByVal pXDoc As CASCADELib.CscXDocument)
-   Design_ExportScriptAndLocators()
+   Dev_ExportScriptAndLocators()
 End Sub
