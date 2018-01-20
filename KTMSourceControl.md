@@ -28,7 +28,7 @@ Other elements have export capability and could poentially be treated the same w
 
 ## Programmatic Export
 
-At the end of the [KTM Script Logging Framework](DevExport/KTM Script Logging Framework.vb) you will find the function Dev_ExportScriptAndLocators and supporting functions CreateClassFolders, and ClassHierarchy.  You could call this manually during development, but what I recommend is to call it when you extract a document in Project Builder, or open a document in Validation, or something else you do frequently while developing and testing the project.  That way, the exported files are essentially updated as you work, and are easy to manually trigger if needed.  Example:
+At the end of the [KTM Script Logging Framework](DevExport/KTM%20Script%20Logging%20Framework.vb#L1141) you will find the function Dev_ExportScriptAndLocators and supporting functions CreateClassFolders, and ClassHierarchy.  You could call this manually during development, but what I recommend is to call it when you extract a document in Project Builder, or open a document in Validation, or something else you do frequently while developing and testing the project.  That way, the exported files are essentially updated as you work, and are easy to manually trigger if needed.  Example:
 
     Private Sub Document_AfterExtract(ByVal pXDoc As CASCADELib.CscXDocument)
     ' Only when run in Project Builder...
@@ -37,6 +37,12 @@ At the end of the [KTM Script Logging Framework](DevExport/KTM Script Logging Fr
         Dev_ExportScriptAndLocators()
     End If
     End Sub
+
+### Export Location
+
+By default this function exports the data to {ProjectFolderParent}\DevExport\.  This means that DevExport will be a sibling to the folder containing the project, which is follows a covention often used for files related to the project such as Databases and Dictionaries.
+
+To override the location, create a ScriptVariable named "Dev-Export-BaseFolder" with the path of your choosing.  This option should be set if using this script in a KTA Transformation project, because in KTA the project is stored in the database and runs from a temp folder when opened.
 
 ## Directly Diff Project Files in Git
 

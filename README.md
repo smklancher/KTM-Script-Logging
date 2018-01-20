@@ -2,18 +2,15 @@
 
 ## Background
 
-In 2011 I wrote a framework of logging functions for KTM script.  The [documentation](ScriptLoggingDocumentation.md) goes into some of the rationale for how it was designed.  The main goal was to make it easy to quickly drop into a project, add a few logging function calls, and know that relevant metadata would be included in the resulting logs.
+In 2011 I wrote a framework of logging functions for KTM script.  The [documentation](ScriptLoggingDocumentation.md) goes into some of the rationale for how it was designed.  The main goal was to make it easy to quickly drop into a project, add a few logging function calls, and know that relevant metadata would be included in the resulting logs while trying to diagnose a problem.
 
 I also put together some thoughts on approaches to adding a KTM project to source control: [KTM Source Control](KTMSourceControl.md)
 
 ## Logging Framework Code
 
-The logging code can be pasted into any new or existing project and just needs
+The [logging code](DevExport/KTM%20Script%20Logging%20Framework.vb) can be pasted into any new or existing project.  The script includes events that call the [required functions](ScriptLoggingDocumentation.md#required-functions), so if pasting into an existing project that already uses these events (Application_InitializeBatch, Batch_Open, and Batch_Close) you will need to move these calls into your existing events and remove the duplicates.
 
-* To be initialized as described in the [required functions](ScriptLoggingDocumentation.md#required-functions) section of the documentation.
-* A project level reference to the Microsoft Scripting Runtime, which many KTM projects already include.
-
-Then call the [useful functions](ScriptLoggingDocumentation.md#useful-functions) (ScriptLog, ErrorLog, and MsgBoxLog) as needed throughout the project.
+Then start adding the [useful functions](ScriptLoggingDocumentation.md#useful-functions) (ScriptLog, ErrorLog, and MsgBoxLog) as needed throughout the project to start logging.
 
 ## Testing the Logging Framework
 
