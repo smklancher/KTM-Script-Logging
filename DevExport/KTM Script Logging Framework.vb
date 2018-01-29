@@ -298,6 +298,10 @@ Public Sub ScriptLog(ByVal msg As String, Optional ByVal AddToLocalLog As Boolea
    Dim ModuleAndFunction As String
    ModuleAndFunction = Logging_ExecutionModeString() & " -- " & Logging_StackLine(Caller) & " "
 
+   ' Always print a shorter message to the intermediate pane of the script window
+   ' Previously this was only done in "Design" modes, but this meant it excluded testing runtime events
+   Debug.Print(Format(Timer, "00000.00") & " " & WhichDoc & ModuleAndFunction & msg)
+
    'check if we are in design or runtime
    If Project.ScriptExecutionMode = CscScriptModeServerDesign Or _
       Project.ScriptExecutionMode = CscScriptModeValidationDesign Or _
@@ -310,9 +314,6 @@ Public Sub ScriptLog(ByVal msg As String, Optional ByVal AddToLocalLog As Boolea
          For Append As #1
          Print #1, DateString & WhichDoc & ModuleAndFunction & msg
       Close #1
-
-      'also print a shorter message to the intermediate pane of the script window
-      Debug.Print(Format(Timer, "00000.00") & " " & WhichDoc & ModuleAndFunction & msg)
    Else
       'In case logging is attempted without or before initialization
       If BATCH_IMAGE_LOGS = "" Then
