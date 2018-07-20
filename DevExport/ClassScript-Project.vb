@@ -88,7 +88,7 @@ Public Sub Logging_InitializeBatch(ByVal pXRootFolder As CscXFolder)
       'pad hex ID
       BATCH_ID_HEX = Right("00000000", 8 - Len(BATCH_ID_HEX)) & BATCH_ID_HEX
 
-      'These items are only present in KTM 5.5
+      'These items are only present in KTM 5.5+
       If pXRootFolder.XValues.ItemExists("AC_BATCH_WINDOWSUSERNAME") Then
          BATCH_WINDOWSUSERNAME=pXRootFolder.XValues.ItemByName("AC_BATCH_WINDOWSUSERNAME").Value
          BATCH_USERID = pXRootFolder.XValues.ItemByName("AC_BATCH_USERID").Value
@@ -119,12 +119,14 @@ Public Sub Logging_InitializeBatch(ByVal pXRootFolder As CscXFolder)
       Set fso = CreateObject("Scripting.FileSystemObject")
       'Dim fso As FileSystemObject
 
+      On Error GoTo CouldNotCreate
+
       If Not fso.FolderExists(BATCH_IMAGE_LOGS) Then
          fso.CreateFolder(BATCH_IMAGE_LOGS)
       End If
       LogFolderExists=True
 
-      'if creating the folder causes an error then FolderExists is still false
+      'if creating the folder causes an error then LogFolderExists is still false
       CouldNotCreate:
       Err.Clear()
       On Error GoTo catch
@@ -135,14 +137,6 @@ Public Sub Logging_InitializeBatch(ByVal pXRootFolder As CscXFolder)
          '  but if there is a problem, use the image path itself
          BATCH_IMAGE_LOGS = pXRootFolder.XValues.ItemByName("AC_IMAGE_DIRECTORY").Value & _
             "\" & BATCH_ID_HEX & "\"
-      End If
-
-      'Set Process ID as part of the batch log path if needed
-      If PROCESS_ID_IN_BATCHLOG_FILENAME Then
-         'SMK 2013-05-16 - Separate log per process, ID set in InitializeBatch
-         'SMK 2013-09-09 - Made optional, default to off
-         BATCH_LOG_FULLPATH = BATCH_IMAGE_LOGS & BATCH_ID_HEX & "_" & PROCESS_ID & BATCH_LOG_FILENAME
-         'otherwise leave blank and it gets set as needed in ScriptLog
       End If
    End If
 
@@ -315,14 +309,19 @@ Public Sub ScriptLog(ByVal msg As String, Optional ByVal AddToLocalLog As Boolea
          Print #1, DateString & WhichDoc & ModuleAndFunction & msg
       Close #1
    Else
-      'In case logging is attempted without or before initialization
+      'In case logging is attempted without or before initialization, set temp path and unknown batch
+      'If Logging_InitializeBatch is called later it will correctly override these
       If BATCH_IMAGE_LOGS = "" Then
+         'Keep in mind that a user has a different temp path per Windows session:
+         'https://stackoverflow.com/a/6521387/221018
          BATCH_IMAGE_LOGS = Environ("Temp") & "\"
-         BATCH_ID_HEX = "Unknown"
+         BATCH_ID_HEX = "Unknown-" & Format(Now(), "yyyymmdd")
       End If
 
-      'If using the process ID in the filename this will have been set from InitializeBatch
-      If BATCH_LOG_FULLPATH = "" Then
+      'Path with or without process ID
+      If PROCESS_ID_IN_BATCHLOG_FILENAME And PROCESS_ID > 0 Then
+         BATCH_LOG_FULLPATH = BATCH_IMAGE_LOGS & BATCH_ID_HEX & "_" & PROCESS_ID & BATCH_LOG_FILENAME
+      Else
          BATCH_LOG_FULLPATH = BATCH_IMAGE_LOGS & BATCH_ID_HEX & BATCH_LOG_FILENAME
       End If
 
@@ -1252,3 +1251,9 @@ Public Sub Dev_ExportScriptAndLocators()
    Next
 End Sub
 '========  END   DEV EXPORT ========
+
+
+Private Sub Application_InitializeScript()
+   'Test logging before Logging_InitializeBatch has been called to set the batch image path
+   ScriptLog("This will be logged to temp folder")
+End Sub
